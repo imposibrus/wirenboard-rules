@@ -1,4 +1,4 @@
-/* globals defineVirtualDevice, defineRule, dev, log */
+/* globals defineVirtualDevice, defineRule, dev, log, readConfig */
 
 // place your rules here or add more .js files in this directory
 // log("add your rules to /etc/wb-rules/");
@@ -29,11 +29,22 @@ defineVirtualDevice("overheat_control", {
   }
 });
 
+/**
+ * @typedef Setpoints
+ * @property {String} name
+ * @property {String} id
+ * @property {Number} temperature
+ */
+/**
+ * @type Setpoints
+ */
+var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
+
 defineRule("heater_control", {
   whenChanged: "wb-w1/28-3c01d075c755",
   then: function (newValue, devName, cellName) {
     if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
-    if ( newValue >= 27.5) {
+    if ( newValue >= setpoints.temperature) {
       dev["wb-mdm3_104"]["K3"] = false;
     } else if (dev['heater_control/enabled']) {
       dev["wb-mdm3_104"]["K3"] = true;
@@ -45,7 +56,7 @@ defineRule("heater_control2", {
   whenChanged: "wb-m1w2_224/External Sensor 1",
   then: function (newValue, devName, cellName) {
     if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
-    if ( newValue >= 30) {
+    if ( newValue >= setpoints.temperature) {
       dev["wb-mr6c_42"]["K3"] = false;
     } else if (dev['heater_control/enabled']) {
       dev["wb-mr6c_42"]["K3"] = true;
