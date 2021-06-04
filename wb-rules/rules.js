@@ -34,29 +34,33 @@ defineVirtualDevice("overheat_control", {
  */
 var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
 
-defineRule("heater_control", {
-  whenChanged: "wb-w1/28-3c01d075c755",
-  then: function (newValue, devName, cellName) {
-    if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
-    if ( newValue >= setpoints.temperature) {
-      dev["wb-mdm3_104"]["K3"] = false;
-    } else if (dev['heater_control/enabled']) {
-      dev["wb-mdm3_104"]["K3"] = true;
-    }
-  }
-});
+overheat_control('wb-w1/28-3c01d075c755', 'wb-mdm3_104/K3');
 
-defineRule("heater_control2", {
-  whenChanged: "wb-m1w2_224/External Sensor 1",
-  then: function (newValue, devName, cellName) {
-    if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
-    if ( newValue >= setpoints.temperature) {
-      dev["wb-mr6c_42"]["K3"] = false;
-    } else if (dev['heater_control/enabled']) {
-      dev["wb-mr6c_42"]["K3"] = true;
-    }
-  }
-});
+overheat_control('wb-m1w2_224/External Sensor 1', 'wb-mr6c_42/K3');
+
+overheat_control('wb-w1/28-01206018a787', 'wb-mr6c_138/K1');
+
+/**
+ *
+ * @param {String} sensor
+ * @param {String} relay
+ */
+function overheat_control(sensor, relay) {
+    var name = 'overheat_control_' + sensor.replace('/', '_');
+    var relayPath = relay.split('/');
+
+    defineRule(name, {
+        whenChanged: [sensor, 'heater_control/enabled', 'overheat_control/enabled'],
+        then: function (newValue, devName, cellName) {
+            if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
+            if ( dev[sensor] >= setpoints.temperature) {
+                dev[relayPath[0]][relayPath[1]] = false;
+            } else if (dev['heater_control/enabled']) {
+                dev[relayPath[0]][relayPath[1]] = true;
+            }
+        }
+    });
+}
 
 defineVirtualDevice("master_btn", {
   title: "Мастер выключатель",
