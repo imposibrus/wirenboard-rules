@@ -205,9 +205,49 @@ ActionButtons.onButtonPress(
     1000
 );
 
+/*
+defineRule('move_sensor', {
+    whenChanged: ['wb-adc/A1'],
+    then: function(newVal, devName, cellName) {
+        if (newVal > 3) {
+            dev['wb-mr6c_42']['K1'] = true;
+        } else {
+            dev['wb-mr6c_42']['K1'] = false;
+        }
+    }
+});
+*/
 
-function switchRelay(device, control) { //Принимает в параметрах устройство и выход. Переключает состояние выхода на противоположное.
-  log.info("LongPress switchRelay" ,device, control)//Это лог. Он попадает в /var/log/messages
+(function() {
+    // TODO: switch to persistent storage
+    var lastValues = {};
+
+    defineRule('rgbwd-state', {
+        whenChanged: ['wb-mrgbw-d_153/White 1-B', 'wb-mrgbw-d_153/White 2-R', 'wb-mrgbw-d_153/White 3-G', 'wb-mrgbw-d_153/White 4-W'],
+        then: function(newVal, devName, cellName) {
+            // /state - on/off flag for Home Assistant
+            publish('/devices/'+ devName +'/controls/'+ cellName +'/state', newVal > 0 ? 1 : 0, 0, true);
+            if (newVal) {
+                // save last value for each channel
+                lastValues[devName + '/' + cellName] = newVal;
+            }
+        }
+    });
+
+    trackMqtt('/devices/wb-mrgbw-d_153/controls/+/set', function(message) {
+        var matched = message.topic.match(/\/devices\/(.*)?\/controls\/(.*)?\/set/);
+        if (matched) {
+            if (message.value === '1') {
+                // on "turning on" set brightness to last saved value
+                dev[matched[1]][matched[2]] = lastValues[matched[1] + '/' + matched[2]] || 100;
+            } else {
+                dev[matched[1]][matched[2]] = 0;
+            }
+        }
+    });
+})();
+
+function switchRelay(device, control) {
   dev[device][control] = !dev[device + "/" + control];
 }
 
