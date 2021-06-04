@@ -20,8 +20,8 @@ defineVirtualDevice("overheat_control", {
   cells: {
     enabled: {
       type: "switch",
-      value: true,
-    },
+      value: true
+    }
     // enabled: {
     //   type: "switch",
     //   value: true,
@@ -91,51 +91,100 @@ defineRule('master_off', {
         dev["wb-mdm3_104"]["K3"] = dev['master_btn/enabled'];
       }
     }
-  },
+  }
 });
 
-ActionButtons.onButtonPress(
-    'wb-gpio/EXT1_IN11',
-    {
-      singlePress: {
-         func: function() {
-           log.debug('singlePress', arguments);
-         },
-         prop: ['wb-mr6c_42', 'K3']
-      },
-      doublePress: {
-        func: switchRelay,
-        prop: ['wb-mr6c_42', 'K3']
-        //func: switchDimmerRGB,
-        //prop: ["wb-mr6c_10", "K2", "wb-mrgbw-d_24"]
-      },
-      longPress: {
-        func: switchRelay,
-        prop: ["wb-mdm3_104", "K3"]
-        //func: setRandomRGB,
-        //prop: ["wb-mr6c_10", "K2", "wb-mrgbw-d_24"]
-      },
-      longRelease: {
-        func: function () {
-          log.debug('longRelease');
-        },
-      }
-    },
-    300,
-    1000
-);
+// ActionButtons.onButtonPress(
+//     'wb-gpio/EXT1_IN11',
+//     {
+//       singlePress: {
+//          func: switchRelay,
+//          prop: ['wb-mr6c_138', 'K1']
+//       },
+//       doublePress: {
+//         func: switchRelay,
+//         prop: ['wb-mr6c_42', 'K3']
+//         //func: switchDimmerRGB,
+//         //prop: ["wb-mr6c_10", "K2", "wb-mrgbw-d_24"]
+//       },
+//       longPress: {
+//         func: switchRelay,
+//         prop: ["wb-mdm3_104", "K3"]
+//         //func: setRandomRGB,
+//         //prop: ["wb-mr6c_10", "K2", "wb-mrgbw-d_24"]
+//       },
+//       longRelease: {
+//         func: function () {
+//           log.debug('longRelease');
+//         }
+//       }
+//     },
+//     300,
+//     1000
+// );
+
+(function() {
+    var lastPressTime = Date.now();
+    var group11 = ['wb-mr6c_42/K3', 'wb-mr6c_138/K1'];
+
+    defineRule('11_test', {
+        whenChanged: 'wb-gpio/EXT1_IN11',
+        then: function(newVal) {
+            if (newVal) {
+                var now = Date.now();
+                var shouldOff = group11.some(function(path) {var chunks = path.split('/'); return dev[chunks[0]][chunks[1]];});
+
+                // double press
+                if (now - lastPressTime <= 300) {
+                    var secondaryState = dev['wb-mr6c_138']['K1'];
+                    log('double press', secondaryState);
+                    dev['wb-mr6c_138']['K1'] = !secondaryState;
+                    dev['wb-mr6c_42']['K3'] = !secondaryState;
+                } else {
+                    // single press
+                    log('single press', shouldOff);
+                    if (shouldOff) {
+                        // switch off all group on single press (when at least one lamp was ON)
+                        switchGroup(group11, false);
+                    } else {
+                        dev['wb-mr6c_42']['K3'] = !shouldOff;
+                    }
+                }
+
+                lastPressTime = now;
+            }
+        }
+    });
+})();
+
+function switchGroup(devices, state) {
+    return devices.map(function(path) {
+        var chunks = path.split('/');
+        dev[chunks[0]][chunks[1]] = state;
+    });
+}
+
+// defineRule('12_test', {
+//     whenChanged: 'wb-gpio/EXT1_IN12',
+//     then: function(newVal) {
+//         if (newVal) {
+//             dev['wb-mr6c_138']['K1'] = !dev['wb-mr6c_138']['K1'];
+//         }
+//     }
+// });
 
 ActionButtons.onButtonPress(
     'wb-gpio/EXT1_IN12',
     {
       singlePress: {
-         func: function() {
-           log.debug('singlePress', arguments);
-         },
-         prop: ['wb-mr6c_42', 'K3']
+          func: switchRelay,
+          prop: ['wb-mr6c_138', 'K1']
       },
       doublePress: {
-        func: switchRelay,
+        func: function() {
+            dev['wb-mr6c_42']['K3'] = !dev["wb-mr6c_42/K3"];
+            dev['wb-mr6c_138']['K1'] = !dev["wb-mr6c_138/K1"];
+        },
         prop: ['wb-mr6c_42', 'K3']
         //func: switchDimmerRGB,
         //prop: ["wb-mr6c_10", "K2", "wb-mrgbw-d_24"]
@@ -149,7 +198,7 @@ ActionButtons.onButtonPress(
       longRelease: {
         func: function () {
           log.debug('longRelease');
-        },
+        }
       }
     },
     300,
