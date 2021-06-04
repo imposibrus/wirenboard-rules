@@ -1,4 +1,4 @@
-/* globals defineVirtualDevice, defineRule, dev, log, readConfig */
+/* globals defineVirtualDevice, defineRule, dev, log, readConfig, publish, trackMqtt */
 
 // place your rules here or add more .js files in this directory
 // log("add your rules to /etc/wb-rules/");
@@ -29,12 +29,6 @@ defineVirtualDevice("overheat_control", {
   }
 });
 
-/**
- * @typedef Setpoints
- * @property {String} name
- * @property {String} id
- * @property {Number} temperature
- */
 /**
  * @type Setpoints
  */
@@ -211,3 +205,34 @@ function dimmerChange(dimmerName, outputName, shiftValue, maxValue) {
 
 
 
+/**
+ * @typedef Setpoints
+ * @property {String} name
+ * @property {String} id
+ * @property {Number} temperature
+ */
+/**
+ * @typedef DefineRuleOptions
+ * @property {Function} [asSoonAs]
+ * @property {Function} [when]
+ * @property {String|String[]} whenChanged
+ * @property {DefineRuleThen} then
+ */
+/**
+ * @typedef DefineRuleThen
+ * @param {String} value
+ * @param {String} dev
+ * @param {String} name
+ */
+/**
+ * @function publish
+ * @param {String} topic
+ * @param payload
+ * @param {Number} [QoS]
+ * @param {Boolean} [retain]
+ */
+/**
+ * @function defineRule
+ * @param {String} name
+ * @param {DefineRuleOptions} options
+ */
