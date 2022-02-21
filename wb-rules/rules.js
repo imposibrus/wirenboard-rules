@@ -4,6 +4,8 @@
 // log("add your rules to /etc/wb-rules/");
 
 var ActionButtons = require('ActionButtons').ActionButtons;
+var Schedules = require('Schedules').Schedules;
+var Aliases1Wire = require('Aliases1Wire').Aliases1Wire;
 
 defineVirtualDevice("heater_control", {
   title: "Управление отоплением",
@@ -15,52 +17,89 @@ defineVirtualDevice("heater_control", {
   }
 });
 
-defineVirtualDevice("overheat_control", {
-  title: "Управление перегревом",
-  cells: {
-    enabled: {
-      type: "switch",
-      value: true
-    }
-    // enabled: {
-    //   type: "switch",
-    //   value: true,
-    // },
-  }
-});
+Aliases1Wire.addAlias('wb-w1/28-3c01d075c755', 'bath_small_floor_shower');
+Aliases1Wire.addAlias('wb-w1/28-0120602c8717', 'bath_small_towel');
+Aliases1Wire.addAlias('wb-w1/28-01206018a787', 'bath_small_floor');
+Aliases1Wire.init();
 
 /**
  * @type Setpoints
  */
-var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
+// var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
+var setpoints = {
+  name: 'test name',
+  id: 'overheat_control',
+  temperature: 30,
+  temp_floor_bath_small: 33,
+  temp_floor_hall: 27,
+  temp_floor_shower_bath_small: 30,
+  temp_polotenc_bath_small: 35,
+  hysteresis: 2
+};
 
-overheat_control('wb-w1/28-3c01d075c755', 'wb-mdm3_104/K3');
-
-overheat_control('wb-m1w2_224/External Sensor 1', 'wb-mr6c_42/K3');
-
-overheat_control('wb-w1/28-01206018a787', 'wb-mr6c_138/K1');
+floor_heat_control('1wireSensors/bath_small_floor', 'wb-mr6c_138/K2', setpoints.temp_floor_bath_small, setpoints.hysteresis);
+floor_heat_control('1wireSensors/bath_small_floor_shower', 'wb-mrm2-mini_134/Relay 1', setpoints.temp_floor_shower_bath_small, setpoints.hysteresis);
+floor_heat_control('1wireSensors/bath_small_towel', 'wb-mrm2-mini_134/Relay 2', setpoints.temp_polotenc_bath_small, setpoints.hysteresis);
 
 /**
  *
  * @param {String} sensor
  * @param {String} relay
+ * @param {Number} setpoint
+ * @param {Number} hysteresis
  */
-function overheat_control(sensor, relay) {
-    var name = 'overheat_control_' + sensor.replace('/', '_');
-    var relayPath = relay.split('/');
+function floor_heat_control(sensor, relay, setpoint, hysteresis) {
+  var name = 'floor_heat_control_' + sensor.replace('/', '_');
+  var relayPath = relay.split('/');
 
-    defineRule(name, {
-        whenChanged: [sensor, 'heater_control/enabled', 'overheat_control/enabled'],
-        then: function (newValue, devName, cellName) {
-            if (!dev['heater_control/enabled'] && !dev['overheat_control/enabled']) return;
-            if ( dev[sensor] >= setpoints.temperature) {
-                dev[relayPath[0]][relayPath[1]] = false;
-            } else if (dev['heater_control/enabled']) {
-                dev[relayPath[0]][relayPath[1]] = true;
-            }
+  defineRule(name, {
+    whenChanged: [sensor, 'heater_control/enabled'],
+    then: function (newValue, devName, cellName) {
+      if (!dev['heater_control/enabled']) {
+        if (dev[relayPath[0]][relayPath[1]]) {
+          log('heating turned off manually via virtual device. turning off the relay "{}"'.format(relay));
+          dev[relayPath[0]][relayPath[1]] = false;
         }
-    });
+        return;
+      }
+
+      if (dev[sensor] >= setpoint && dev[relayPath[0]][relayPath[1]]) {
+        log('sensor temp ({}) climb setpoint temp ({}). turning off the relay "{}"'.format(dev[sensor], setpoint, relay));
+        dev[relayPath[0]][relayPath[1]] = false;
+        return;
+      }
+
+      if (dev[sensor] + hysteresis < setpoint && !dev[relayPath[0]][relayPath[1]]) {
+        log('sensor temp ({}) down hysteresis ({}). turning on the relay "{}"'.format(dev[sensor], setpoint - hysteresis, relay));
+        dev[relayPath[0]][relayPath[1]] = true;
+        return;
+      }
+
+      // log("unacceptable situation, turning off the relay. args: {}, {}, {}. relay state: {}".format(newValue, devName, cellName, dev[relayPath[0]][relayPath[1]]));
+      // dev[relayPath[0]][relayPath[1]] = false;
+    }
+  });
 }
+
+Schedules.registerSchedule({
+  "name" : "warm_floor_small_bath", // вывеска
+  "autoUpdate" : "1m",
+  "intervals" : [
+    [ [7, 00], [20, 00] ],  // в UTC, 10:00 - 23:00 MSK
+  ]
+});
+
+Schedules.initSchedules();
+
+defineRule('auto_off_heater_control', {
+  when: function() {
+    return dev._schedules.warm_floor_small_bath || true;
+  },
+  then: function (newValue, devName, cellName) {
+    log("auto_off_heater_control  newValue={}, devName={}, cellName={}, warm_floor_small_bath={}", newValue, devName, cellName, dev._schedules.warm_floor_small_bath);
+    dev["heater_control/enabled"] = dev._schedules.warm_floor_small_bath || false;
+  }
+});
 
 defineVirtualDevice("master_btn", {
   title: "Мастер выключатель",
@@ -94,6 +133,16 @@ defineRule('master_off', {
   }
 });
 
+
+defineRule('bathroom_switch', {
+  whenChanged: ['wb-gpio/EXT1_IN1'],
+  then: function (newVal, devName, cellName) {
+    if (newVal) {
+      dev['wb-mr6c_138']['K1'] = !dev['wb-mr6c_138']['K1'];
+    }
+  }
+});
+
 // ActionButtons.onButtonPress(
 //     'wb-gpio/EXT1_IN11',
 //     {
@@ -123,39 +172,39 @@ defineRule('master_off', {
 //     1000
 // );
 
-(function() {
-    var lastPressTime = Date.now();
-    var group11 = ['wb-mr6c_42/K3', 'wb-mr6c_138/K1'];
-
-    defineRule('11_test', {
-        whenChanged: 'wb-gpio/EXT1_IN11',
-        then: function(newVal) {
-            if (newVal) {
-                var now = Date.now();
-                var shouldOff = group11.some(function(path) {var chunks = path.split('/'); return dev[chunks[0]][chunks[1]];});
-
-                // double press
-                if (now - lastPressTime <= 300) {
-                    var secondaryState = dev['wb-mr6c_138']['K1'];
-                    log('double press', secondaryState);
-                    dev['wb-mr6c_138']['K1'] = !secondaryState;
-                    dev['wb-mr6c_42']['K3'] = !secondaryState;
-                } else {
-                    // single press
-                    log('single press', shouldOff);
-                    if (shouldOff) {
-                        // switch off all group on single press (when at least one lamp was ON)
-                        switchGroup(group11, false);
-                    } else {
-                        dev['wb-mr6c_42']['K3'] = !shouldOff;
-                    }
-                }
-
-                lastPressTime = now;
-            }
-        }
-    });
-})();
+// (function() {
+//     var lastPressTime = Date.now();
+//     var group11 = ['wb-mr6c_42/K3', 'wb-mr6c_138/K1'];
+//
+//     defineRule('11_test', {
+//         whenChanged: 'wb-gpio/EXT1_IN11',
+//         then: function(newVal) {
+//             if (newVal) {
+//                 var now = Date.now();
+//                 var shouldOff = group11.some(function(path) {var chunks = path.split('/'); return dev[chunks[0]][chunks[1]];});
+//
+//                 // double press
+//                 if (now - lastPressTime <= 300) {
+//                     var secondaryState = dev['wb-mr6c_138']['K1'];
+//                     log('double press', secondaryState);
+//                     dev['wb-mr6c_138']['K1'] = !secondaryState;
+//                     dev['wb-mr6c_42']['K3'] = !secondaryState;
+//                 } else {
+//                     // single press
+//                     log('single press', shouldOff);
+//                     if (shouldOff) {
+//                         // switch off all group on single press (when at least one lamp was ON)
+//                         switchGroup(group11, false);
+//                     } else {
+//                         dev['wb-mr6c_42']['K3'] = !shouldOff;
+//                     }
+//                 }
+//
+//                 lastPressTime = now;
+//             }
+//         }
+//     });
+// })();
 
 function switchGroup(devices, state) {
     return devices.map(function(path) {
@@ -223,7 +272,7 @@ defineRule('move_sensor', {
     var lastValues = {};
 
     defineRule('rgbwd-state', {
-        whenChanged: ['wb-mrgbw-d_153/White 1-B', 'wb-mrgbw-d_153/White 2-R', 'wb-mrgbw-d_153/White 3-G', 'wb-mrgbw-d_153/White 4-W'],
+        whenChanged: ['wb-mrgbw-d_153/Channel B', 'wb-mrgbw-d_153/Channel R', 'wb-mrgbw-d_153/Channel G', 'wb-mrgbw-d_153/Channel W'],
         then: function(newVal, devName, cellName) {
             // /state - on/off flag for Home Assistant
             publish('/devices/'+ devName +'/controls/'+ cellName +'/state', newVal > 0 ? 1 : 0, 0, true);
@@ -238,6 +287,9 @@ defineRule('move_sensor', {
         var matched = message.topic.match(/\/devices\/(.*)?\/controls\/(.*)?\/set/);
         if (matched) {
             if (message.value === '1') {
+                if (dev[matched[1]][matched[2]] > 0) {
+                  return;
+                }
                 // on "turning on" set brightness to last saved value
                 dev[matched[1]][matched[2]] = lastValues[matched[1] + '/' + matched[2]] || 100;
             } else {
@@ -303,6 +355,11 @@ function dimmerChange(dimmerName, outputName, shiftValue, maxValue) {
  * @property {String} name
  * @property {String} id
  * @property {Number} temperature
+ * @property {Number} temp_floor_bath_small
+ * @property {Number} temp_floor_hall
+ * @property {Number} temp_floor_shower_bath_small
+ * @property {Number} temp_polotenc_bath_small
+ * @property {Number} hysteresis
  */
 /**
  * @typedef DefineRuleOptions
@@ -313,9 +370,9 @@ function dimmerChange(dimmerName, outputName, shiftValue, maxValue) {
  */
 /**
  * @typedef DefineRuleThen
- * @param {String} value
- * @param {String} dev
- * @param {String} name
+ * @param {String} newVal
+ * @param {String} devName
+ * @param {String} cellName
  */
 /**
  * @function publish
@@ -327,5 +384,9 @@ function dimmerChange(dimmerName, outputName, shiftValue, maxValue) {
 /**
  * @function defineRule
  * @param {String} name
+ * @param {DefineRuleOptions} options
+ */
+/**
+ * @function defineRule
  * @param {DefineRuleOptions} options
  */

@@ -1,4 +1,4 @@
-/* globals defineRule, log */
+/* globals defineRule, log, exports */
 
 (function () {
     'use strict';
@@ -46,7 +46,7 @@
         var isLongReleased = false;
 
         var ruleName = "on_button_press_" + trigger.replace("/", "_");
-        log("LOG::Define WB Rule: ", ruleName);
+        // log("LOG::Define WB Rule: ", ruleName);
 
         defineRule(ruleName, {
             whenChanged: trigger,
@@ -54,7 +54,9 @@
                 // If button is pressed, wait for a long press
                 if (newValue) {
                     if (timerWaitNextShortPress) {
+                        log('before clearTimeout 1', timerWaitNextShortPress);
                         clearTimeout(timerWaitNextShortPress);
+                        log('after clearTimeout 1');
                     }
 
                     timerLongPress = setTimeout(function () {
@@ -79,7 +81,9 @@
                                                 // log(">>>>>> long press - press (" + actionRepeatCounter++ + ") <<<<<<");
                                             }
                                             if(isLongReleased) {
+                                                log('before clearTimeout 2');
                                                 clearInterval(timerWaitLongRelease);
+                                                log('after clearTimeout 2');
                                             }
                                         }, intervalOfRepeat);
                                     }
@@ -93,7 +97,9 @@
                     // If button is released, then it is not a "long press", start to count clicks
                     if (!isLongPressed) {
                         if (timerLongPress) {
+                            log('before clearTimeout 3');
                             clearTimeout(timerLongPress);
+                            log('after clearTimeout 3');
                         }
                         buttonPressedCounter += 1;
                         timerWaitNextShortPress = setTimeout(function () {
