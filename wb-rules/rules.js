@@ -49,33 +49,32 @@ floor_heat_control('1wireSensors/bath_small_towel', 'wb-mrm2-mini_134/Relay 2', 
  */
 function floor_heat_control(sensor, relay, setpoint, hysteresis) {
   var name = 'floor_heat_control_' + sensor.replace('/', '_');
-  var relayPath = relay.split('/');
 
   defineRule(name, {
     whenChanged: [sensor, 'heater_control/enabled'],
     then: function (newValue, devName, cellName) {
       if (!dev['heater_control/enabled']) {
-        if (dev[relayPath[0]][relayPath[1]]) {
-          log('heating turned off manually via virtual device. turning off the relay "{}"'.format(relay));
-          dev[relayPath[0]][relayPath[1]] = false;
+        if (dev[relay]) {
+          log('floor_heat_control:: heating turned off manually via virtual device. turning OFF the relay "{}"'.format(relay));
+          dev[relay] = false;
         }
         return;
       }
 
-      if (dev[sensor] >= setpoint && dev[relayPath[0]][relayPath[1]]) {
-        log('sensor temp ({}) climb setpoint temp ({}). turning off the relay "{}"'.format(dev[sensor], setpoint, relay));
-        dev[relayPath[0]][relayPath[1]] = false;
+      if (dev[sensor] >= setpoint && dev[relay]) {
+        log('floor_heat_control:: sensor ({}) temp ({}) climb setpoint temp ({}). turning OFF the relay "{}"'.format(sensor, dev[sensor], setpoint, relay));
+        dev[relay] = false;
         return;
       }
 
-      if (dev[sensor] + hysteresis < setpoint && !dev[relayPath[0]][relayPath[1]]) {
-        log('sensor temp ({}) down hysteresis ({}). turning on the relay "{}"'.format(dev[sensor], setpoint - hysteresis, relay));
-        dev[relayPath[0]][relayPath[1]] = true;
+      if (dev[sensor] + hysteresis < setpoint && !dev[relay]) {
+        log('floor_heat_control:: sensor ({}) temp ({}) down hysteresis ({}). turning ON the relay "{}"'.format(sensor, dev[sensor], setpoint - hysteresis, relay));
+        dev[relay] = true;
         return;
       }
 
-      // log("unacceptable situation, turning off the relay. args: {}, {}, {}. relay state: {}".format(newValue, devName, cellName, dev[relayPath[0]][relayPath[1]]));
-      // dev[relayPath[0]][relayPath[1]] = false;
+      // log("floor_heat_control:: unacceptable situation, turning off the relay. args: {}, {}, {}. relay state: {}".format(newValue, devName, cellName, dev[relay]));
+      // dev[relay] = false;
     }
   });
 }
