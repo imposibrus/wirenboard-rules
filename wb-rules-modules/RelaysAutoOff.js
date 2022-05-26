@@ -4,7 +4,7 @@ var virtualDeviceName = "overheat_control";
 var virtualDeviceControlName = virtualDeviceName + "/enabled";
 var autoOffTimeout = 1000 * 60 * 30; // 30 minutes
 /** @type Object.<string, number> */
-var lastRelayActivationTime = new PersistentStorage('RelaysAutoOff');
+var lastRelayActivationTime = new PersistentStorage('RelaysAutoOff', { global: true });
 
 defineVirtualDevice(virtualDeviceName, {
   title: "Управление перегревом",

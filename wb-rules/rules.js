@@ -51,7 +51,7 @@ function floor_heat_control(sensor, relay, setpoint, hysteresis) {
   var name = 'floor_heat_control_' + sensor.replace('/', '_');
 
   defineRule(name, {
-    whenChanged: [sensor, 'heater_control/enabled'],
+    whenChanged: [sensor/*, 'heater_control/enabled'*/],
     then: function (newValue, devName, cellName) {
       if (!dev['heater_control/enabled']) {
         if (dev[relay]) {
