@@ -109,7 +109,9 @@ defineRule('bathroom_switch', {
   }
 });
 
-
+trackMqtt('/devices/+/controls/+/meta/error', function(message) {
+  log.info('meta/error:: name: {}, value: {}'.format(message.topic, message.value));
+});
 
 
 /**
