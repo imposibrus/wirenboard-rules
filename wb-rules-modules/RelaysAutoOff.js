@@ -25,7 +25,7 @@ var RelaysAutoOff = {
     log('RelaysAutoOff::addControl relayDev="{}", ruleName="{}"'.format(relayDev, ruleName));
 
     RelaysAutoOff.relaysUnderControl.push(relayDev);
-    lastRelayActivationTime[relayDev] = 0;
+    lastRelayActivationTime[relayDev] = lastRelayActivationTime[relayDev] || 0;
 
     defineRule(ruleName, {
       whenChanged: [relayDev, virtualDeviceControlName],
