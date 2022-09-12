@@ -57,17 +57,6 @@ trackMqtt('/devices/+/controls/+/meta/error', function(message) {
 
 
 /**
- * @typedef Setpoints
- * @property {String} name
- * @property {String} id
- * @property {Number} temperature
- * @property {Number} temp_floor_bath_small
- * @property {Number} temp_floor_hall
- * @property {Number} temp_floor_shower_bath_small
- * @property {Number} temp_polotenc_bath_small
- * @property {Number} hysteresis
- */
-/**
  * @typedef DefineRuleOptions
  * @property {Function} [asSoonAs]
  * @property {Function} [when]

@@ -1,0 +1,7 @@
+{
+    "hysteresis": 2,
+    "hall_floor_temp_wanted": 26,
+    "bath_small_floor_temp_wanted": 30,
+    "bath_small_shower_temp_wanted": 30,
+    "bath_small_towel_temp_wanted": 36
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Set Points for Temperature",
+  "description": "Thresholds to adjust temperature",
+  "configFile": {
+    "path": "/etc/wb-mqtt-setpoints.json",
+    "service": "wb-rules"
+  },
+  "properties": {
+    "hysteresis": {
+      "type": "integer",
+      "title": "Hysteresis (℃)",
+      "default": 2,
+      "propertyOrder": 1
+    },
+    "hall_floor_temp_wanted": {
+      "type": "integer",
+      "title": "Wanted temperature for the floor in hall (℃)",
+      "default": 27,
+      "propertyOrder": 2
+    },
+    "bath_small_floor_temp_wanted": {
+      "type": "integer",
+      "title": "Wanted temperature for the floor in small bath (℃)",
+      "default": 30,
+      "propertyOrder": 3
+    },
+    "bath_small_shower_temp_wanted": {
+      "type": "integer",
+      "title": "Wanted temperature for the shower in small bath (℃)",
+      "default": 30,
+      "propertyOrder": 4
+    },
+    "bath_small_towel_temp_wanted": {
+      "type": "integer",
+      "title": "Wanted temperature for the towel in small bath (℃)",
+      "default": 34,
+      "propertyOrder": 5
+    }
+  },
+  "required": ["hysteresis", "hall_floor_temp_wanted", "bath_small_floor_temp_wanted", "bath_small_shower_temp_wanted", "bath_small_towel_temp_wanted"]
+}
+

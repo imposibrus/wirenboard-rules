@@ -2,21 +2,11 @@
 /**
  * @type Setpoints
  */
-// var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
-var setpoints = {
-  name: 'test name',
-  id: 'overheat_control',
-  temperature: 30,
-  temp_floor_bath_small: 33,
-  temp_floor_hall: 27,
-  temp_floor_shower_bath_small: 30,
-  temp_polotenc_bath_small: 36,
-  hysteresis: 2
-};
+var setpoints = readConfig("/etc/wb-mqtt-setpoints.json");
 
-floor_heat_control('1wireSensors/bath_small_floor', 'wb-mr6c_138/K2', setpoints.temp_floor_bath_small, setpoints.hysteresis);
-floor_heat_control('1wireSensors/bath_small_floor_shower', 'wb-mrm2-mini_134/K1', setpoints.temp_floor_shower_bath_small, setpoints.hysteresis);
-floor_heat_control('1wireSensors/bath_small_towel', 'wb-mrm2-mini_134/K2', setpoints.temp_polotenc_bath_small, 3);
+floor_heat_control('1wireSensors/bath_small_floor', 'wb-mr6c_138/K2', setpoints.bath_small_floor_temp_wanted, setpoints.hysteresis);
+floor_heat_control('1wireSensors/bath_small_floor_shower', 'wb-mrm2-mini_134/K1', setpoints.bath_small_shower_temp_wanted, setpoints.hysteresis);
+floor_heat_control('1wireSensors/bath_small_towel', 'wb-mrm2-mini_134/K2', setpoints.bath_small_towel_temp_wanted, 3);
 
 /**
  *
@@ -56,3 +46,12 @@ function floor_heat_control(sensor, relay, setpoint, hysteresis) {
     }
   });
 }
+
+/**
+ * @typedef Setpoints
+ * @property {Number} hysteresis
+ * @property {Number} hall_floor_temp_wanted
+ * @property {Number} bath_small_floor_temp_wanted
+ * @property {Number} bath_small_shower_temp_wanted
+ * @property {Number} bath_small_towel_temp_wanted
+ */
